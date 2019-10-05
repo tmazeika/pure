@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("stdlib"))
     implementation("org.slf4j:slf4j-simple:1.7.28")
 
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
@@ -26,6 +26,9 @@ application {
 val test by tasks.getting(Test::class) {
     useJUnitPlatform {}
 }
+
+val run: JavaExec by tasks
+run.standardInput = System.`in`
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
