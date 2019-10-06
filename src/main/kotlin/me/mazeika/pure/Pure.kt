@@ -3,7 +3,6 @@ package me.mazeika.pure
 import me.mazeika.pure.exception.ExceptionReporter
 import me.mazeika.pure.exception.PureException
 import me.mazeika.pure.exception.SimpleExceptionReporter
-import me.mazeika.pure.interpret.Interpreter
 import me.mazeika.pure.interpret.PureInterpreter
 import me.mazeika.pure.parse.PureParser
 import me.mazeika.pure.scan.PureScanner
@@ -23,24 +22,19 @@ fun main() {
             val reporter: ExceptionReporter = SimpleExceptionReporter(
                 System.out, "stdin", line, 15
             )
+
             fun onException(e: PureException) {
                 error = true
                 reporter.report(e)
             }
 
-            val expr = scanner.tokenize(::onException).toList().let {
+            val stmts = scanner.tokenize(::onException).toList().let {
                 PureParser(it).parse(::onException)
             }
 
-            if (error || expr == null) {
-                continue
-            }
-
-            // println(AstPrinter.print(expr))
-
-            val interpreter: Interpreter = PureInterpreter(System.out)
-
-            interpreter.interpret(expr, ::onException)
+            if (!error) PureInterpreter(System.out).interpret(
+                stmts, ::onException
+            )
         }
     }
 }

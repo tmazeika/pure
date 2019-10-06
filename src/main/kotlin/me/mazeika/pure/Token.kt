@@ -127,5 +127,5 @@ sealed class Token(val lexeme: KString, val offset: Int) {
 
     class While(offset: Int) : Token("while", offset)
 
-    class EOF(offset: Int) : Token("eof", offset)
+    class EOF(offset: Int) : Token("", offset)
 }

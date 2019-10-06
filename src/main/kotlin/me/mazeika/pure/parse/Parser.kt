@@ -10,5 +10,5 @@ interface Parser {
      *
      * // TODO
      */
-    fun parse(onException: (e: PureException) -> Unit): Expr?
+    fun parse(onException: (PureException) -> Unit): Sequence<Stmt>
 }

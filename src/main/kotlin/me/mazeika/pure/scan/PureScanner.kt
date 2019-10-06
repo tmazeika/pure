@@ -132,7 +132,7 @@ class PureScanner(private val source: String) : Scanner {
                 }
             }
 
-            yield(Token.EOF(++currentIdx))
+            yield(Token.EOF(currentIdx))
         }
 
         /** Gets the current lexeme scanned so far. */

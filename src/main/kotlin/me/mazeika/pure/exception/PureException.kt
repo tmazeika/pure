@@ -8,6 +8,6 @@ abstract class PureException(
 
     init {
         require(offset >= 0)
-        require(length > 0)
+        require(length >= 0)
     }
 }

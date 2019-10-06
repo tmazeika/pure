@@ -6,17 +6,43 @@ import me.mazeika.pure.exception.PureException
 
 class PureParser(private val tokens: List<Token>) : Parser {
 
-    override fun parse(onException: (e: PureException) -> Unit): Expr? = try {
-        TokensToExpr().expr()
-    } catch (e: PureException) {
-        onException(e)
-        null
-    }
+    override fun parse(onException: (PureException) -> Unit): Sequence<Stmt> =
+        TokensToStmts(onException).stmts()
 
-    private inner class TokensToExpr {
+    private inner class TokensToStmts(
+        private val onException: (PureException) -> Unit
+    ) {
         private var currentIdx = 0
 
-        fun expr(): Expr = equality()
+        fun stmts(): Sequence<Stmt> = sequence {
+            while (!isAtEnd()) {
+                try {
+                    yield(stmt())
+                } catch (e: PureException) {
+                    onException(e)
+                    synchronize()
+                }
+            }
+        }
+
+        private fun stmt(): Stmt = when {
+            match<Token.Print>() -> printStmt()
+            else -> exprStmt()
+        }
+
+        private fun printStmt(): Stmt {
+            val expr: Expr = expr()
+            consume<Token.Semicolon>("Expected ';' after value")
+            return Stmt.Print(expr)
+        }
+
+        private fun exprStmt(): Stmt {
+            val expr: Expr = expr()
+            consume<Token.Semicolon>("Expected ';' after expression")
+            return Stmt.Expr(expr)
+        }
+
+        private fun expr(): Expr = equality()
 
         private fun equality(): Expr {
             var expr: Expr = comparison()

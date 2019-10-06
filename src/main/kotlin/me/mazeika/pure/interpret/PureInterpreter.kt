@@ -4,18 +4,24 @@ import me.mazeika.pure.Token
 import me.mazeika.pure.exception.InterpretException
 import me.mazeika.pure.exception.PureException
 import me.mazeika.pure.parse.Expr
+import me.mazeika.pure.parse.Stmt
 
 class PureInterpreter(private val out: Appendable) : Interpreter,
-                                                     Expr.Visitor<Any?> {
-
-    override fun interpret(expr: Expr, onException: (PureException) -> Unit) {
-        try {
-            val value = evaluate(expr)
-            out.appendln(stringify(value))
-        } catch (e: PureException) {
-            onException(e)
-        }
+                                                     Expr.Visitor<Any?>,
+                                                     Stmt.Visitor<Unit> {
+    override fun visitExpr(stmt: Stmt.Expr) {
+        evaluate(stmt.expr)
     }
+
+    override fun visitPrint(stmt: Stmt.Print) {
+        out.appendln(stringify(evaluate(stmt.expr)))
+    }
+
+    override fun interpret(
+        stmts: Sequence<Stmt>, onException: (PureException) -> Unit
+    ) = stmts.forEach(::execute)
+
+    private fun execute(stmt: Stmt) = stmt.accept(this)
 
     private fun stringify(value: Any?): String = if (value == null) "nil" else {
         val str = value.toString()
