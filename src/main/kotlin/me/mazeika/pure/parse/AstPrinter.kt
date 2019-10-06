@@ -12,7 +12,7 @@ object AstPrinter : Expr.Visitor<String> {
     override fun visitGrouping(expr: Expr.Grouping): String =
         parenthesize("group", expr.expr)
 
-    override fun <T> visitLiteral(expr: Expr.Literal<T>): String =
+    override fun visitLiteral(expr: Expr.Literal): String =
         expr.value.toString()
 
     override fun visitUnary(expr: Expr.Unary): String =
