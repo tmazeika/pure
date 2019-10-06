@@ -7,7 +7,7 @@ class SimpleCompilationExceptionReporterTest : StringSpec({
 
     "constructor should not write anything" {
         val out = StringBuilder()
-        SimpleCompilationExceptionReporter(out)
+        SimpleExceptionReporter(out)
 
         out.toString() shouldBe ""
     }

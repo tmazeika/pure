@@ -11,7 +11,7 @@ sealed class Expr {
     interface Visitor<out R> {
         fun visitBinary(expr: Binary): R
         fun visitGrouping(expr: Grouping): R
-        fun visitLiteral(expr: Literal): R
+        fun <T> visitLiteral(expr: Literal<T>): R
         fun visitUnary(expr: Unary): R
     }
 
@@ -27,7 +27,7 @@ sealed class Expr {
             visitor.visitGrouping(this)
     }
 
-    class Literal(val token: Token.Literal<*>) : Expr() {
+    class Literal<T>(val value: T) : Expr() {
 
         override fun <R> accept(visitor: Visitor<R>): R =
             visitor.visitLiteral(this)

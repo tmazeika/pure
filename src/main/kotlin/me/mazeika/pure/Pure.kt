@@ -1,8 +1,12 @@
 package me.mazeika.pure
 
+import me.mazeika.pure.exception.ExceptionReporter
+import me.mazeika.pure.exception.PureException
+import me.mazeika.pure.exception.SimpleExceptionReporter
 import me.mazeika.pure.parse.AstPrinter
-import me.mazeika.pure.parse.Expr
+import me.mazeika.pure.parse.PureParser
 import me.mazeika.pure.scan.PureScanner
+import me.mazeika.pure.scan.Scanner
 
 fun main() {
     while (true) {
@@ -12,28 +16,25 @@ fun main() {
             println("Closing...")
             break
         } else {
-            PureScanner.scanTokens(line, onException = ::println).forEach {
-                print("[${it.lexeme}] @ ${it.offset}")
+            var error = false
 
-                when (it) {
-                    is Token.String -> println(" >> \"${it.value}\"")
-                    is Token.Literal<*> -> println(" >> ${it.value}")
-                    else -> println()
-                }
+            val scanner: Scanner = PureScanner(line)
+            val reporter: ExceptionReporter = SimpleExceptionReporter(
+                System.out, "stdin", line, 15
+            )
+            fun onError(e: PureException) {
+                error = true
+                reporter.report(e)
             }
 
-            println(
-                AstPrinter.print(
-                    Expr.Binary(
-                        Expr.Unary(
-                            Token.Minus(1),
-                            Expr.Literal(Token.Number(1, 35555.0))
-                        ), Token.Star(1), Expr.Grouping(
-                            Expr.Literal(Token.Number(1, 45.67))
-                        )
-                    )
-                )
-            )
+            val expr = scanner.tokenize(::onError).toList().let {
+                PureParser(it).parse(::onError)
+            }
+
+            if (error || expr == null) {
+                continue
+            }
+            println(AstPrinter.print(expr))
         }
     }
 }

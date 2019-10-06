@@ -1,18 +1,14 @@
 package me.mazeika.pure
 
-import me.mazeika.pure.Token.Literal
 import kotlin.String as KString
 
 /**
  * Represents a scanned token with a location at the offset from the beginning
  * of the source text.
- *
- * [equals] compares [lexeme]s and ignores [offset]s. [toString] is not
- * overridden: for [Literal]s, [toString] could return the lexeme, the value, or
- * both, thus it is not clear which is best to return and so it is not
- * redefined.
  */
 sealed class Token(val lexeme: KString, val offset: Int) {
+
+    override fun toString(): KString = lexeme
 
     override fun equals(other: Any?): Boolean = when {
         this === other -> true
@@ -34,6 +30,8 @@ sealed class Token(val lexeme: KString, val offset: Int) {
         offset: Int,
         val value: T
     ) : Token(type, offset) {
+
+        override fun toString(): KString = value.toString()
 
         override fun equals(other: Any?): Boolean = when {
             this === other -> true
@@ -89,7 +87,10 @@ sealed class Token(val lexeme: KString, val offset: Int) {
         Literal<KString>("identifier", offset, value)
 
     class String(offset: Int, value: KString) :
-        Literal<KString>("string", offset, value)
+        Literal<KString>("string", offset, value) {
+
+        override fun toString(): KString = "\"$value\""
+    }
 
     class Number(offset: Int, value: Double) :
         Literal<Double>("number", offset, value)
