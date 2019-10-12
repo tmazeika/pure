@@ -5,6 +5,8 @@ import me.mazeika.pure.Token
 /** Represents an expression that can be evaluated. */
 sealed class Expression {
 
+    data class Assign(val name: Token, val value: Expression) : Expression()
+
     data class Binary(val left: Expression, val op: Token, val right: Expression) : Expression()
 
     data class Grouping(val expr: Expression) : Expression()

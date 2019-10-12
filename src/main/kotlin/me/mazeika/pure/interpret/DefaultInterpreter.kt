@@ -35,11 +35,16 @@ internal class DefaultInterpreter(private val out: Appendable) : Interpreter {
     }.discard()
 
     private fun evaluate(expr: Expression): Any? = when (expr) {
+        is Expression.Assign -> {
+            val right = this.evaluate(expr.value)
+            this.env.redefine(expr.name, right)
+            right
+        }
         is Expression.Binary -> this.evaluateBinary(expr)
         is Expression.Grouping -> this.evaluate(expr.expr)
         is Expression.Literal -> expr.value
         is Expression.Unary -> {
-            val right = evaluate(expr.right)
+            val right = this.evaluate(expr.right)
 
             when (expr.op) {
                 is Token.Minus -> -this.checkNumberOperand(expr.op, right)

@@ -49,12 +49,29 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
         }
 
         private fun exprStmt(): Statement {
-            val expr: Expression = expr()
+            val expr = expr()
             consume<Token.Semicolon>("Expected ';' after expression statement")
             return Statement.Expression(expr)
         }
 
-        private fun expr(): Expression = equality()
+        private fun expr(): Expression = assignment()
+
+        private fun assignment(): Expression {
+            val expr = equality()
+
+            if (match<Token.Equal>()) {
+                val equals = previous()
+                val value = assignment()
+
+                if (expr is Expression.Variable) {
+                    return Expression.Assign(expr.name, value)
+                }
+
+                onException(ParseException("Invalid assignment target", equals))
+            }
+
+            return expr
+        }
 
         private fun equality(): Expression {
             var expr: Expression = comparison()

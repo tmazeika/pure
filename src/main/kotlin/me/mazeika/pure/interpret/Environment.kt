@@ -11,6 +11,11 @@ internal class Environment {
         map[ident] = value
     }
 
+    fun redefine(ident: Token, value: Any?) {
+        if (map.contains(ident)) map[ident] = value
+        else throw InterpretException("Undefined identifier '$ident'", ident)
+    }
+
     fun lookUp(ident: Token): Any? =
         if (map.contains(ident)) map[ident]
         else throw InterpretException("Undefined identifier '$ident'", ident)

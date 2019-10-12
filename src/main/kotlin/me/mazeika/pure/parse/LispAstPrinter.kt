@@ -4,6 +4,7 @@ internal class LispAstPrinter : AstPrinter {
 
     /** Converts an [expr] to a String recursively. **/
     override fun print(expr: Expression?): String = when (expr) {
+        is Expression.Assign -> this.print(expr.value)
         is Expression.Binary -> parenthesize(expr.op.toString(), expr.left, expr.right)
         is Expression.Grouping -> parenthesize("group", expr.expr)
         is Expression.Literal -> expr.toString()
