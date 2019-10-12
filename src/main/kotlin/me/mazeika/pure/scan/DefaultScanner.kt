@@ -4,27 +4,19 @@ import me.mazeika.pure.Token
 import me.mazeika.pure.exception.PureException
 import me.mazeika.pure.exception.ScanException
 
-/** Represents a token scanner for Pure [source] text. */
-class PureScanner(private val source: String) : Scanner {
-
-    /** The allowed digits for numbers. */
-    private val digits = '0'..'9'
+/** Represents a default source text scanner. */
+internal class DefaultScanner(private val onException: (PureException) -> Unit) : Scanner {
 
     /** The allowed alphanumeric characters for identifiers. */
     private val alphanumeric = ('0'..'9') + ('a'..'z') + ('A'..'Z') + '_'
 
-    override fun tokenize(
-        onException: (e: PureException) -> Unit
-    ): Sequence<Token> = Tokenizer(onException).tokenize()
+    /** The allowed digits for numbers. */
+    private val digits = '0'..'9'
 
-    /**
-     * Represents a tokenizer of Pure [source] text.
-     *
-     * Calls [onException] for every exception that occurs while tokenizing.
-     */
-    private inner class Tokenizer(
-        private val onException: (e: PureException) -> Unit
-    ) {
+    override fun scan(source: String): Sequence<Token> = Tokenizer(source).tokenize()
+
+    private inner class Tokenizer(private val source: String) {
+
         private var startIdx = 0
         private var currentIdx = 0
 
@@ -60,79 +52,60 @@ class PureScanner(private val source: String) : Scanner {
                         else Token.Greater(startIdx)
                     )
                     '/' -> {
-                        if (match('/')) {
-                            // consume entire comment line
-                            while (peek1() != '\n' && !isAtEnd()) advance()
-                        } else {
-                            yield(Token.Slash(startIdx))
-                        }
+                        if (match('/')) discardComment()
+                        else yield(Token.Slash(startIdx))
                     }
-                    '"' -> {
-                        // consume all string characters
-                        while (peek1() != '"' && !isAtEnd()) advance()
-
-                        if (isAtEnd()) {
-                            onException(
-                                ScanException(
-                                    "Unterminated string",
-                                    startIdx,
-                                    currentIdx - startIdx
-                                )
-                            )
-                        } else {
-                            // consume the closing '"'
-                            advance()
-
-                            yield(
-                                Token.String(
-                                    startIdx, getLexeme().substring(
-                                        1, currentIdx - startIdx - 1
-                                    )
-                                )
-                            )
-                        }
-                    }
-                    in digits -> {
-                        // consume whole number
-                        while (peek1() in digits) advance()
-
-                        // look for fraction part
-                        if (peek1() == '.' && peek2() in digits) {
-                            // consume '.'
-                            advance()
-
-                            // consume fractional part
-                            while (peek1() in digits) advance()
-                        }
-
-                        yield(
-                            Token.Number(
-                                startIdx, getLexeme().toDouble()
-                            )
-                        )
-                    }
-                    in alphanumeric -> {
-                        // consume whole identifier
-                        while (peek1() in alphanumeric) advance()
-
-                        yield(
-                            getReservedWord(getLexeme()) ?: Token.Identifier(
-                                startIdx, getLexeme()
-                            )
-                        )
-                    }
+                    '"' -> yieldAll(tokenizeString())
+                    // must tokenize digits first, as identifiers cannot start with a digit
+                    in digits -> yieldAll(tokenizeNumber())
+                    in alphanumeric -> yieldAll(tokenizeReservedOrIdentifier())
                     ' ', '\t', '\r', '\n' -> {
                         // ignore whitespace
                     }
-                    else -> onException(
-                        ScanException(
-                            "Unexpected character: $ch", startIdx, 1
-                        )
-                    )
+                    else -> onException(ScanException("Unexpected character: $ch", startIdx, 1))
                 }
             }
 
             yield(Token.EOF(currentIdx))
+        }
+
+        private fun discardComment() {
+            while (!isAtEnd() && peekOne() != '\n') advance()
+        }
+
+        private fun tokenizeString() = sequence<Token> {
+            // consume all string characters
+            while (!isAtEnd() && peekOne() != '"') advance()
+
+            if (isAtEnd()) {
+                onException(ScanException("Unterminated string", startIdx, currentIdx - startIdx))
+            } else {
+                // consume the closing '"'
+                advance()
+                yield(Token.String(startIdx, getLexeme().substring(1, currentIdx - startIdx - 1)))
+            }
+        }
+
+        private fun tokenizeReservedOrIdentifier() = sequence<Token> {
+            // consume reserved or identifier
+            while (peekOne() in alphanumeric) advance()
+
+            yield(getReservedWord(getLexeme()) ?: Token.Identifier(startIdx, getLexeme()))
+        }
+
+        private fun tokenizeNumber() = sequence<Token> {
+            // consume whole part
+            while (peekOne() in digits) advance()
+
+            // look for fraction part
+            if (peekOne() == '.' && peekTwo() in digits) {
+                // consume '.'
+                advance()
+                // consume fraction part
+                while (peekOne() in digits) advance()
+            }
+
+            yield(Token.Number(startIdx, getLexeme().toDouble()))
         }
 
         /** Gets the current lexeme scanned so far. */
@@ -171,7 +144,7 @@ class PureScanner(private val source: String) : Scanner {
          * Returns `null` when the current index is at the end of the source
          * text.
          */
-        private fun peek1(): Char? = if (isAtEnd()) null else source[currentIdx]
+        private fun peekOne(): Char? = if (isAtEnd()) null else source[currentIdx]
 
         /**
          * Looks ahead two characters.
@@ -179,15 +152,11 @@ class PureScanner(private val source: String) : Scanner {
          * Returns `null` when the next index from the current index is at the
          * end of the source text.
          */
-        private fun peek2(): Char? = if (currentIdx + 1 >= source.length) {
-            null
-        } else {
-            source[currentIdx + 1]
-        }
+        private fun peekTwo(): Char? = if (currentIdx + 1 >= source.length) null else source[currentIdx + 1]
 
         /**
-         * Gets the [Token] associated with the given [lexeme] or `null` if
-         * [lexeme] is not a reserved word.
+         * Gets the [Token] associated with [lexeme] or `null` if [lexeme] is
+         * not a reserved word.
          */
         private fun getReservedWord(lexeme: String): Token? = when (lexeme) {
             "and" -> Token.And(startIdx)

@@ -1,9 +1,12 @@
 package me.mazeika.pure.interpret
 
-import me.mazeika.pure.exception.PureException
-import me.mazeika.pure.parse.Stmt
+import me.mazeika.pure.parse.Statement
 
 interface Interpreter {
 
-    fun interpret(stmts: Sequence<Stmt>, onException: (PureException) -> Unit)
+    fun interpret(stmts: Sequence<Statement>)
+
+    companion object {
+        fun createDefaultInterpreter(out: Appendable): Interpreter = DefaultInterpreter(out)
+    }
 }

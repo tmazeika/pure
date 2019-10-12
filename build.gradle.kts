@@ -19,18 +19,15 @@ dependencies {
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
 }
 
-application {
-    mainClassName = "me.mazeika.pure.PureKt"
-}
-
-val test by tasks.getting(Test::class) {
-    useJUnitPlatform {}
-}
+application.mainClassName = "me.mazeika.pure.PureKt"
 
 val run: JavaExec by tasks
 run.standardInput = System.`in`
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
-    kotlinOptions.freeCompilerArgs = listOf("-XXLanguage:+InlineClasses")
+}
+
+val test by tasks.getting(Test::class) {
+    useJUnitPlatform {}
 }

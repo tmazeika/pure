@@ -1,40 +1,32 @@
 package me.mazeika.pure
 
 import me.mazeika.pure.exception.ExceptionReporter
+import me.mazeika.pure.exception.GraphicalExceptionReporter
 import me.mazeika.pure.exception.PureException
-import me.mazeika.pure.exception.SimpleExceptionReporter
-import me.mazeika.pure.interpret.PureInterpreter
-import me.mazeika.pure.parse.PureParser
-import me.mazeika.pure.scan.PureScanner
+import me.mazeika.pure.interpret.Interpreter
+import me.mazeika.pure.parse.Parser
 import me.mazeika.pure.scan.Scanner
 
-fun main() {
-    while (true) {
-        val line = readLine()
+fun main() = repl()
 
-        if (line == null) {
-            println("Closing...")
-            break
-        } else {
-            var error = false
+fun repl() = repl(Interpreter.createDefaultInterpreter(System.out))
 
-            val scanner: Scanner = PureScanner(line)
-            val reporter: ExceptionReporter = SimpleExceptionReporter(
-                System.out, "stdin", line, 15
-            )
+tailrec fun repl(interpreter: Interpreter) {
+    val line: String = readLine() ?: return
 
-            fun onException(e: PureException) {
-                error = true
-                reporter.report(e)
-            }
+    execute(interpreter, line, GraphicalExceptionReporter(System.out, "stdin", line, 15))
+    repl(interpreter)
+}
 
-            val stmts = scanner.tokenize(::onException).toList().let {
-                PureParser(it).parse(::onException)
-            }
-
-            if (!error) PureInterpreter(System.out).interpret(
-                stmts, ::onException
-            )
-        }
+fun execute(interpreter: Interpreter, source: String, exceptionReporter: ExceptionReporter) {
+    var error = false
+    fun exceptionTracker(e: PureException) {
+        error = true
+        exceptionReporter.report(e)
     }
+
+    val tokens = Scanner.createDefault(::exceptionTracker).scan(source).toList()
+    val stmts = Parser.createDefault(::exceptionTracker).parse(tokens)
+
+    if (!error) interpreter.interpret(stmts)
 }

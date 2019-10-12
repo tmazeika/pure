@@ -13,7 +13,7 @@ import kotlin.math.min
  * surrounding the lexeme(s) of interest. E.g. `padding=3` prints the three
  * characters to the left of the lexeme and the three characters to the right.
  */
-class SimpleExceptionReporter(
+class GraphicalExceptionReporter(
     private val out: Appendable,
     private val sourceName: String,
     private val sourceText: String,

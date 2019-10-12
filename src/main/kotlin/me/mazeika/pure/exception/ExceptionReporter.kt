@@ -1,8 +1,8 @@
 package me.mazeika.pure.exception
 
-/** Represents a reporter of compile time exceptions. */
+/** Represents a reporter of Pure exceptions. */
 interface ExceptionReporter {
 
-    /** Reports the given exception [e]. */
+    /** Reports that [e] has occurred. */
     fun report(e: PureException)
 }
