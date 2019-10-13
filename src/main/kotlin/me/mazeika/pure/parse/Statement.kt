@@ -10,6 +10,8 @@ sealed class Statement {
 
     data class Expression(val expr: EvalExpr) : Statement()
 
+    data class Function(val name: Token, val params: List<Token>, val body: Block) : Statement()
+
     data class If(val condition: EvalExpr, val thenBranch: Block, val elseBranch: Block?) : Statement()
 
     data class While(val condition: EvalExpr, val body: Block) : Statement()

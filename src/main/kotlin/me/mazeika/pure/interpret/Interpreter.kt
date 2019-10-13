@@ -4,6 +4,8 @@ import me.mazeika.pure.parse.Statement
 
 interface Interpreter {
 
+    fun interpret(env: Environment, stmts: Sequence<Statement>)
+
     fun interpret(stmts: Sequence<Statement>)
 
     companion object {

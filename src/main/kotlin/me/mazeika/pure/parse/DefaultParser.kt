@@ -23,7 +23,28 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
             }
         }
 
-        private fun declaration(): Statement = if (match<Token.Var>()) varDeclaration() else stmt()
+        private fun declaration(): Statement = when {
+            match<Token.Fun>() -> function("function")
+            match<Token.Var>() -> varDeclaration()
+            else -> stmt()
+        }
+
+        private fun function(kind: String): Statement {
+            val name = consume<Token.Identifier>("Expected $kind name")
+            consume<Token.LeftParen>("Expected '(' after $kind name")
+            val params = mutableListOf<Token.Identifier>()
+            if (!check<Token.RightParen>()) {
+                do {
+                    if (params.size >= 255) {
+                        onException(ParseException("Cannot have more than 255 parameters", peek()))
+                    }
+                    params.add(consume("Expected $kind parameter name"))
+                } while (match<Token.Comma>())
+            }
+            consume<Token.RightParen>("Expected ')' after $kind parameters")
+            consume<Token.LeftBrace>("Expected '{' before $kind body")
+            return Statement.Function(name, params, Statement.Block(block().toList()))
+        }
 
         private fun varDeclaration(): Statement {
             val name = consume<Token.Identifier>("Expected identifier")
@@ -40,6 +61,7 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
         private fun stmt(): Statement = when {
             match<Token.If>() -> ifStmt()
             match<Token.While>() -> whileStmt()
+            match<Token.For>() -> forStmt()
             match<Token.Print>() -> printStmt()
             match<Token.LeftBrace>() -> Statement.Block(block().toList())
             else -> exprStmt()
@@ -64,6 +86,35 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
 
             val body: Statement.Block = Statement.Block(block().toList())
             return Statement.While(condition, body)
+        }
+
+        private fun forStmt(): Statement {
+            val initializer = when {
+                match<Token.Semicolon>() -> null
+                match<Token.Var>() -> varDeclaration()
+                else -> exprStmt()
+            }
+            val condition = when {
+                !check<Token.Semicolon>() -> expr()
+                else -> Expression.Literal(true)
+            }
+            consume<Token.Semicolon>("Expected ';' after loop condition")
+            val increment = when {
+                !check<Token.LeftBrace>() -> expr()
+                else -> null
+            }
+            consume<Token.LeftBrace>("Expected '{' after loop increment")
+
+            val blockList = block().toMutableList()
+
+            if (increment != null) {
+                blockList.add(Statement.Expression(increment))
+            }
+            var body: Statement = Statement.While(condition, Statement.Block(blockList))
+            if (initializer != null) {
+                body = Statement.Block(listOf(initializer, body))
+            }
+            return body
         }
 
         private fun printStmt(): Statement {
@@ -163,7 +214,35 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
 
         private fun unary(): Expression = when {
             match<Token.Bang>() || match<Token.Minus>() -> Expression.Unary(previous(), unary())
-            else -> atom()
+            else -> call()
+        }
+
+        private fun call(): Expression {
+            var expr = atom()
+
+            while (true) {
+                if (match<Token.LeftParen>()) {
+                    expr = finishCall(expr)
+                } else {
+                    break
+                }
+            }
+
+            return expr
+        }
+
+        private fun finishCall(callee: Expression): Expression {
+            val args: MutableList<Expression> = mutableListOf()
+            if (!check<Token.RightParen>()) {
+                do {
+                    if (args.size >= 255) {
+                        onException(ParseException("Cannot have more than 255 arguments", peek()))
+                    }
+                    args.add(expr())
+                } while (match<Token.Comma>())
+            }
+            val paren: Token = consume<Token.RightParen>("Expected ')' after function arguments")
+            return Expression.Call(callee, paren, args)
         }
 
         private fun atom(): Expression = when {

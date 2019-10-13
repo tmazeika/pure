@@ -5,13 +5,27 @@ import me.mazeika.pure.exception.InterpretException
 import me.mazeika.pure.parse.Expression
 import me.mazeika.pure.parse.Statement
 
-internal class DefaultInterpreter(private val env: Environment, private val out: Appendable) : Interpreter {
+internal class DefaultInterpreter(private val env: Environment.Global, private val out: Appendable) : Interpreter {
+
+    init {
+        this.env.define(Token.Identifier(0, "clock"), object : PureCallable {
+            override val arity: Int = 0
+
+            override fun call(interpreter: Interpreter, env: Environment.Global, args: List<Any?>): Any? {
+                return System.currentTimeMillis().toDouble() / 1000.0
+            }
+
+            override fun toString(): String = "<native fn>"
+        })
+    }
 
     fun Any?.discard() = Unit
 
-    override fun interpret(stmts: Sequence<Statement>) {
-        stmts.forEach { this.execute(this.env, it) }
+    override fun interpret(env: Environment, stmts: Sequence<Statement>) {
+        stmts.forEach { this.execute(env, it) }
     }
+
+    override fun interpret(stmts: Sequence<Statement>) = this.interpret(env, stmts)
 
     private fun execute(env: Environment, stmt: Statement): Unit = when (stmt) {
         is Statement.Block -> {
@@ -20,6 +34,10 @@ internal class DefaultInterpreter(private val env: Environment, private val out:
         }
         is Statement.Expression -> {
             this.evaluate(env, stmt.expr)
+        }
+        is Statement.Function -> {
+            val function = PureFunction(stmt)
+            env.define(stmt.name, function)
         }
         is Statement.If -> when {
             this.isTruthy(this.evaluate(env, stmt.condition)) -> this.execute(env, stmt.thenBranch)
@@ -51,6 +69,20 @@ internal class DefaultInterpreter(private val env: Environment, private val out:
             right
         }
         is Expression.Binary -> this.evaluateBinary(env, expr)
+        is Expression.Call -> {
+            val callee = this.evaluate(env, expr.callee)
+            val args = mutableListOf<Any?>()
+            expr.args.forEach { args.add(this.evaluate(env, it)) }
+
+            if (callee !is PureCallable) {
+                throw InterpretException("Can only call functions and classes", expr.paren)
+            }
+
+            if (args.size != callee.arity) {
+                throw InterpretException("Expected ${callee.arity} function arguments but got ${args.size}", expr.paren)
+            }
+            callee.call(this, env.getGlobal(), args)
+        }
         is Expression.Grouping -> this.evaluate(env, expr.expr)
         is Expression.Literal -> expr.value
         is Expression.Logical -> {

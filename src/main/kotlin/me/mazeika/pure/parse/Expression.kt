@@ -9,6 +9,8 @@ sealed class Expression {
 
     data class Binary(val left: Expression, val op: Token, val right: Expression) : Expression()
 
+    data class Call(val callee: Expression, val paren: Token, val args: List<Expression>) : Expression()
+
     data class Grouping(val expr: Expression) : Expression()
 
     data class Literal(val value: Any?) : Expression() {

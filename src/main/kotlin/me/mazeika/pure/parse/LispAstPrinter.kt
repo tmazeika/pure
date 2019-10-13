@@ -6,6 +6,7 @@ internal class LispAstPrinter : AstPrinter {
     override fun print(expr: Expression?): String = when (expr) {
         is Expression.Assign -> this.print(expr.value)
         is Expression.Binary -> parenthesize(expr.op.lexeme, expr.left, expr.right)
+        is Expression.Call -> parenthesize(this.print(expr.callee), expr.args)
         is Expression.Grouping -> parenthesize("group", expr.expr)
         is Expression.Literal -> expr.toString()
         is Expression.Logical -> parenthesize(expr.op.lexeme, expr.left, expr.right)
@@ -14,9 +15,11 @@ internal class LispAstPrinter : AstPrinter {
         null -> "nil"
     }
 
-    private fun parenthesize(name: String, vararg exprs: Expression): String {
+    private fun parenthesize(name: String, exprs: List<Expression>): String {
         val sb = StringBuilder("(").append(name)
         for (expr in exprs) sb.append(' ').append(this.print(expr))
         return sb.append(')').toString()
     }
+
+    private fun parenthesize(name: String, vararg exprs: Expression): String = parenthesize(name, exprs.toList())
 }

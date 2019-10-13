@@ -3,7 +3,7 @@ package me.mazeika.pure.interpret
 import me.mazeika.pure.Token
 import me.mazeika.pure.exception.InterpretException
 
-internal sealed class Environment {
+sealed class Environment {
 
     private val map: MutableMap<Token, Any?> = HashMap()
 
@@ -14,6 +14,8 @@ internal sealed class Environment {
     abstract fun redefine(ident: Token, value: Any?)
 
     abstract fun lookUp(ident: Token): Any?
+
+    abstract fun getGlobal(): Global
 
     class Global : Environment() {
 
@@ -26,6 +28,8 @@ internal sealed class Environment {
             if (super.map.contains(ident)) return super.map[ident]
             else throw InterpretException("Undefined identifier '$ident'", ident)
         }
+
+        override fun getGlobal(): Global = this
     }
 
     class Local(private val parent: Environment) : Environment() {
@@ -38,5 +42,7 @@ internal sealed class Environment {
         override fun lookUp(ident: Token): Any? =
             if (super.map.contains(ident)) super.map[ident]
             else this.parent.lookUp(ident)
+
+        override fun getGlobal(): Global = parent.getGlobal()
     }
 }
