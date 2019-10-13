@@ -11,7 +11,7 @@ internal class DefaultInterpreter(private val env: Environment.Global, private v
         this.env.define(Token.Identifier(0, "clock"), object : PureCallable {
             override val arity: Int = 0
 
-            override fun call(interpreter: Interpreter, env: Environment.Global, args: List<Any?>): Any? {
+            override fun call(interpreter: Interpreter, args: List<Any?>): Any? {
                 return System.currentTimeMillis().toDouble() / 1000.0
             }
 
@@ -36,7 +36,7 @@ internal class DefaultInterpreter(private val env: Environment.Global, private v
             this.evaluate(env, stmt.expr)
         }
         is Statement.Function -> {
-            val function = PureFunction(stmt)
+            val function = PureFunction(stmt, env)
             env.define(stmt.name, function)
         }
         is Statement.If -> when {
@@ -88,7 +88,7 @@ internal class DefaultInterpreter(private val env: Environment.Global, private v
             if (args.size != callee.arity) {
                 throw InterpretException("Expected ${callee.arity} function arguments but got ${args.size}", expr.paren)
             }
-            callee.call(this, env.getGlobal(), args)
+            callee.call(this, args)
         }
         is Expression.Grouping -> this.evaluate(env, expr.expr)
         is Expression.Literal -> expr.value
