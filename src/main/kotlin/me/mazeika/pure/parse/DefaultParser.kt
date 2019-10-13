@@ -39,6 +39,7 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
 
         private fun stmt(): Statement = when {
             match<Token.If>() -> ifStmt()
+            match<Token.While>() -> whileStmt()
             match<Token.Print>() -> printStmt()
             match<Token.LeftBrace>() -> Statement.Block(block().toList())
             else -> exprStmt()
@@ -55,6 +56,14 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
                 elseBranch = Statement.Block(block().toList())
             }
             return Statement.If(condition, thenBranch, elseBranch)
+        }
+
+        private fun whileStmt(): Statement {
+            val condition: Expression = expr()
+            consume<Token.LeftBrace>("Expected '{' after while condition")
+
+            val body: Statement.Block = Statement.Block(block().toList())
+            return Statement.While(condition, body)
         }
 
         private fun printStmt(): Statement {

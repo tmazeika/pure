@@ -12,6 +12,8 @@ sealed class Statement {
 
     data class If(val condition: EvalExpr, val thenBranch: Block, val elseBranch: Block?) : Statement()
 
+    data class While(val condition: EvalExpr, val body: Block) : Statement()
+
     data class Print(val expr: EvalExpr) : Statement()
 
     data class Variable(val name: Token.Identifier, val initializer: EvalExpr?) : Statement()

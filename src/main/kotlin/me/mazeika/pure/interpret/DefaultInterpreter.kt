@@ -27,6 +27,11 @@ internal class DefaultInterpreter(private val env: Environment, private val out:
             else -> {
             }
         }
+        is Statement.While -> {
+            while (this.isTruthy(this.evaluate(env, stmt.condition))) {
+                this.execute(env, stmt.body)
+            }
+        }
         is Statement.Print -> {
             this.out.appendln(this.stringify(this.evaluate(env, stmt.expr)))
         }
