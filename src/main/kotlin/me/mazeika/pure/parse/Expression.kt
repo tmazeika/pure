@@ -20,6 +20,8 @@ sealed class Expression {
         }
     }
 
+    data class Logical(val left: Expression, val op: Token, val right: Expression) : Expression()
+
     data class Unary(val op: Token, val right: Expression) : Expression()
 
     data class Variable(val name: Token) : Expression() {

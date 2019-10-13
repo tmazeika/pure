@@ -38,9 +38,23 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
         }
 
         private fun stmt(): Statement = when {
+            match<Token.If>() -> ifStmt()
             match<Token.Print>() -> printStmt()
             match<Token.LeftBrace>() -> Statement.Block(block().toList())
             else -> exprStmt()
+        }
+
+        private fun ifStmt(): Statement {
+            val condition: Expression = expr()
+            consume<Token.LeftBrace>("Expected '{' after if condition")
+
+            val thenBranch: Statement.Block = Statement.Block(block().toList())
+            var elseBranch: Statement.Block? = null
+            if (match<Token.Else>()) {
+                consume<Token.LeftBrace>("Expected '{' after 'else'")
+                elseBranch = Statement.Block(block().toList())
+            }
+            return Statement.If(condition, thenBranch, elseBranch)
         }
 
         private fun printStmt(): Statement {
@@ -65,7 +79,7 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
         private fun expr(): Expression = assignment()
 
         private fun assignment(): Expression {
-            val expr = equality()
+            val expr = or()
 
             if (match<Token.Equal>()) {
                 val equals = previous()
@@ -78,6 +92,26 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
                 onException(ParseException("Invalid assignment target", equals))
             }
 
+            return expr
+        }
+
+        private fun or(): Expression {
+            var expr: Expression = and()
+            while (match<Token.Or>()) {
+                val op: Token = previous()
+                val right: Expression = and()
+                expr = Expression.Logical(expr, op, right)
+            }
+            return expr
+        }
+
+        private fun and(): Expression {
+            var expr: Expression = equality()
+            while (match<Token.And>()) {
+                val op: Token = previous()
+                val right: Expression = equality()
+                expr = Expression.Logical(expr, op, right)
+            }
             return expr
         }
 
@@ -107,7 +141,7 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
             while (match<Token.Minus>() || match<Token.Plus>()) {
                 expr = Expression.Binary(expr, previous(), multiplication())
             }
-            return expr;
+            return expr
         }
 
         private fun multiplication(): Expression {

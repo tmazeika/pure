@@ -7,31 +7,37 @@ import me.mazeika.pure.parse.Statement
 
 internal class DefaultInterpreter(private val env: Environment, private val out: Appendable) : Interpreter {
 
+    fun Any?.discard() = Unit
+
     override fun interpret(stmts: Sequence<Statement>) {
         stmts.forEach { this.execute(this.env, it) }
     }
 
-    private fun execute(env: Environment, stmt: Statement) {
-        when (stmt) {
-            is Statement.Block -> {
-                val newEnv: Environment = Environment.Local(env)
-                stmt.stmts.forEach { this.execute(newEnv, it) }
-            }
-            is Statement.Expression -> {
-                this.evaluate(env, stmt.expr)
-            }
-            is Statement.Print -> {
-                this.out.appendln(this.stringify(this.evaluate(env, stmt.expr)))
-            }
-            is Statement.Variable -> {
-                val value = when {
-                    stmt.initializer != null -> this.evaluate(env, stmt.initializer)
-                    else -> null
-                }
-                env.define(stmt.name, value)
+    private fun execute(env: Environment, stmt: Statement): Unit = when (stmt) {
+        is Statement.Block -> {
+            val newEnv: Environment = Environment.Local(env)
+            stmt.stmts.forEach { this.execute(newEnv, it) }
+        }
+        is Statement.Expression -> {
+            this.evaluate(env, stmt.expr)
+        }
+        is Statement.If -> when {
+            this.isTruthy(this.evaluate(env, stmt.condition)) -> this.execute(env, stmt.thenBranch)
+            stmt.elseBranch != null -> this.execute(env, stmt.elseBranch)
+            else -> {
             }
         }
-    }
+        is Statement.Print -> {
+            this.out.appendln(this.stringify(this.evaluate(env, stmt.expr)))
+        }
+        is Statement.Variable -> {
+            val value = when {
+                stmt.initializer != null -> this.evaluate(env, stmt.initializer)
+                else -> null
+            }
+            env.define(stmt.name, value)
+        }
+    }.discard()
 
     private fun evaluate(env: Environment, expr: Expression): Any? = when (expr) {
         is Expression.Assign -> {
@@ -42,6 +48,13 @@ internal class DefaultInterpreter(private val env: Environment, private val out:
         is Expression.Binary -> this.evaluateBinary(env, expr)
         is Expression.Grouping -> this.evaluate(env, expr.expr)
         is Expression.Literal -> expr.value
+        is Expression.Logical -> {
+            val left = this.evaluate(env, expr.left)
+
+            if (expr.op is Token.Or) {
+                if (isTruthy(left)) left else this.evaluate(env, expr.right)
+            } else if (!isTruthy(left)) left else this.evaluate(env, expr.right)
+        }
         is Expression.Unary -> {
             val right = this.evaluate(env, expr.right)
 

@@ -14,7 +14,7 @@ fun repl() = repl(Interpreter.createDefault(System.out))
 tailrec fun repl(interpreter: Interpreter) {
     val line: String = readLine() ?: return
 
-    execute(interpreter, line, GraphicalExceptionReporter(System.out, "stdin", line, 15))
+    execute(interpreter, line, GraphicalExceptionReporter(System.out, "stdin", line, 30))
     repl(interpreter)
 }
 

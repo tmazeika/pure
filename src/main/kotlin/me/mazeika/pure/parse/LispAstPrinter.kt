@@ -8,6 +8,7 @@ internal class LispAstPrinter : AstPrinter {
         is Expression.Binary -> parenthesize(expr.op.lexeme, expr.left, expr.right)
         is Expression.Grouping -> parenthesize("group", expr.expr)
         is Expression.Literal -> expr.toString()
+        is Expression.Logical -> parenthesize(expr.op.lexeme, expr.left, expr.right)
         is Expression.Unary -> parenthesize(expr.op.lexeme, expr.right)
         is Expression.Variable -> expr.toString()
         null -> "nil"
