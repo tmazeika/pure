@@ -18,6 +18,8 @@ sealed class Statement {
 
     data class Print(val expr: EvalExpr) : Statement()
 
+    data class Return(val keyword: Token, val value: EvalExpr?) : Statement()
+
     data class Variable(val name: Token.Identifier, val initializer: EvalExpr?) : Statement()
 }
 

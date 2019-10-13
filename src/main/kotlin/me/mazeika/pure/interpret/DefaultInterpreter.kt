@@ -53,6 +53,13 @@ internal class DefaultInterpreter(private val env: Environment.Global, private v
         is Statement.Print -> {
             this.out.appendln(this.stringify(this.evaluate(env, stmt.expr)))
         }
+        is Statement.Return -> {
+            var value: Any? = null
+            if (stmt.value != null) {
+                value = this.evaluate(env, stmt.value)
+            }
+            throw Return(value)
+        }
         is Statement.Variable -> {
             val value = when {
                 stmt.initializer != null -> this.evaluate(env, stmt.initializer)

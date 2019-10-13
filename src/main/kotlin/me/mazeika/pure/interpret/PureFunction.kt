@@ -10,7 +10,11 @@ internal class PureFunction(private val declaration: Statement.Function) : PureC
         declaration.params.forEachIndexed { idx, param ->
             newEnv.define(param, args[idx])
         }
-        interpreter.interpret(newEnv, declaration.body.stmts.asSequence())
+        try {
+            interpreter.interpret(newEnv, declaration.body.stmts.asSequence())
+        } catch (r: Return) {
+            return r.value
+        }
         return null
     }
 
