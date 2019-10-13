@@ -7,6 +7,6 @@ interface Interpreter {
     fun interpret(stmts: Sequence<Statement>)
 
     companion object {
-        fun createDefaultInterpreter(out: Appendable): Interpreter = DefaultInterpreter(out)
+        fun createDefault(out: Appendable): Interpreter = DefaultInterpreter(Environment.Global(), out)
     }
 }

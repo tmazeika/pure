@@ -39,6 +39,7 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
 
         private fun stmt(): Statement = when {
             match<Token.Print>() -> printStmt()
+            match<Token.LeftBrace>() -> Statement.Block(block().toList())
             else -> exprStmt()
         }
 
@@ -46,6 +47,13 @@ class DefaultParser(private val onException: (PureException) -> Unit) : Parser {
             val expr: Expression = expr()
             consume<Token.Semicolon>("Expected ';' after statement")
             return Statement.Print(expr)
+        }
+
+        private fun block(): Sequence<Statement> = sequence {
+            while (!check<Token.RightBrace>() && !isAtEnd()) {
+                yield(declaration())
+            }
+            consume<Token.RightBrace>("Expected '}' after block")
         }
 
         private fun exprStmt(): Statement {

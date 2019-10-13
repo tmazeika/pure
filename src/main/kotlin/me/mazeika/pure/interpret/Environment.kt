@@ -3,20 +3,40 @@ package me.mazeika.pure.interpret
 import me.mazeika.pure.Token
 import me.mazeika.pure.exception.InterpretException
 
-internal class Environment {
+internal sealed class Environment {
 
     private val map: MutableMap<Token, Any?> = HashMap()
 
     fun define(ident: Token, value: Any?) {
-        map[ident] = value
+        this.map[ident] = value
     }
 
-    fun redefine(ident: Token, value: Any?) {
-        if (map.contains(ident)) map[ident] = value
-        else throw InterpretException("Undefined identifier '$ident'", ident)
+    abstract fun redefine(ident: Token, value: Any?)
+
+    abstract fun lookUp(ident: Token): Any?
+
+    class Global : Environment() {
+
+        override fun redefine(ident: Token, value: Any?) {
+            if (super.map.contains(ident)) super.map[ident] = value
+            else throw InterpretException("Undefined identifier '$ident'", ident)
+        }
+
+        override fun lookUp(ident: Token): Any? {
+            if (super.map.contains(ident)) return super.map[ident]
+            else throw InterpretException("Undefined identifier '$ident'", ident)
+        }
     }
 
-    fun lookUp(ident: Token): Any? =
-        if (map.contains(ident)) map[ident]
-        else throw InterpretException("Undefined identifier '$ident'", ident)
+    class Local(private val parent: Environment) : Environment() {
+
+        override fun redefine(ident: Token, value: Any?) {
+            if (super.map.contains(ident)) super.map[ident] = value
+            else this.parent.redefine(ident, value)
+        }
+
+        override fun lookUp(ident: Token): Any? =
+            if (super.map.contains(ident)) super.map[ident]
+            else this.parent.lookUp(ident)
+    }
 }

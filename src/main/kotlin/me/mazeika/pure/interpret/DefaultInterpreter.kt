@@ -6,45 +6,48 @@ import me.mazeika.pure.parse.AstPrinter
 import me.mazeika.pure.parse.Expression
 import me.mazeika.pure.parse.Statement
 
-internal class DefaultInterpreter(private val out: Appendable) : Interpreter {
+internal class DefaultInterpreter(private val env: Environment, private val out: Appendable) : Interpreter {
 
-    private val env = Environment()
+    override fun interpret(stmts: Sequence<Statement>) {
+        stmts.forEach { this.execute(this.env, it) }
+    }
 
-    @Suppress("unused")
-    fun Any?.discard() = Unit
-
-    override fun interpret(stmts: Sequence<Statement>) = stmts.forEach(::execute)
-
-    private fun execute(stmt: Statement) = when (stmt) {
-        is Statement.Expression -> {
-            out.appendln("--- Evaluating: ${AstPrinter.createLisp().print(stmt.expr)}")
-            this.evaluate(stmt.expr)
-        }
-        is Statement.Print -> {
-            out.appendln("--- Evaluating: ${AstPrinter.createLisp().print(stmt.expr)}")
-            this.out.appendln(this.stringify(this.evaluate(stmt.expr)))
-        }
-        is Statement.Variable -> {
-            val value = when {
-                stmt.initializer != null -> this.evaluate(stmt.initializer)
-                else -> null
+    private fun execute(env: Environment, stmt: Statement) {
+        when (stmt) {
+            is Statement.Block -> {
+                val newEnv: Environment = Environment.Local(env)
+                stmt.stmts.forEach { this.execute(newEnv, it) }
             }
-            out.appendln("--- Defining '${stmt.name}' with: ${AstPrinter.createLisp().print(stmt.initializer)}")
-            this.env.define(stmt.name, value)
+            is Statement.Expression -> {
+                this.out.appendln("--- Evaluating: ${AstPrinter.createLisp().print(stmt.expr)}")
+                this.evaluate(env, stmt.expr)
+            }
+            is Statement.Print -> {
+                this.out.appendln("--- Evaluating: ${AstPrinter.createLisp().print(stmt.expr)}")
+                this.out.appendln(this.stringify(this.evaluate(env, stmt.expr)))
+            }
+            is Statement.Variable -> {
+                val value = when {
+                    stmt.initializer != null -> this.evaluate(env, stmt.initializer)
+                    else -> null
+                }
+                this.out.appendln("--- Defining '${stmt.name}' with: ${AstPrinter.createLisp().print(stmt.initializer)}")
+                env.define(stmt.name, value)
+            }
         }
-    }.discard()
+    }
 
-    private fun evaluate(expr: Expression): Any? = when (expr) {
+    private fun evaluate(env: Environment, expr: Expression): Any? = when (expr) {
         is Expression.Assign -> {
-            val right = this.evaluate(expr.value)
-            this.env.redefine(expr.name, right)
+            val right = this.evaluate(env, expr.value)
+            env.redefine(expr.name, right)
             right
         }
-        is Expression.Binary -> this.evaluateBinary(expr)
-        is Expression.Grouping -> this.evaluate(expr.expr)
+        is Expression.Binary -> this.evaluateBinary(env, expr)
+        is Expression.Grouping -> this.evaluate(env, expr.expr)
         is Expression.Literal -> expr.value
         is Expression.Unary -> {
-            val right = this.evaluate(expr.right)
+            val right = this.evaluate(env, expr.right)
 
             when (expr.op) {
                 is Token.Minus -> -this.checkNumberOperand(expr.op, right)
@@ -52,7 +55,7 @@ internal class DefaultInterpreter(private val out: Appendable) : Interpreter {
                 else -> null
             }
         }
-        is Expression.Variable -> this.env.lookUp(expr.name)
+        is Expression.Variable -> env.lookUp(expr.name)
     }
 
     private fun stringify(value: Any?): String = if (value == null) "nil" else {
@@ -64,9 +67,9 @@ internal class DefaultInterpreter(private val out: Appendable) : Interpreter {
         }
     }
 
-    private fun evaluateBinary(expr: Expression.Binary): Any? {
-        val left = this.evaluate(expr.left)
-        val right = this.evaluate(expr.right)
+    private fun evaluateBinary(env: Environment, expr: Expression.Binary): Any? {
+        val left = this.evaluate(env, expr.left)
+        val right = this.evaluate(env, expr.right)
 
         return when (expr.op) {
             is Token.BangEqual -> !this.isEqual(left, right)

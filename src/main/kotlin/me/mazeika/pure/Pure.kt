@@ -9,7 +9,7 @@ import me.mazeika.pure.scan.Scanner
 
 fun main() = repl()
 
-fun repl() = repl(Interpreter.createDefaultInterpreter(System.out))
+fun repl() = repl(Interpreter.createDefault(System.out))
 
 tailrec fun repl(interpreter: Interpreter) {
     val line: String = readLine() ?: return
@@ -28,5 +28,9 @@ fun execute(interpreter: Interpreter, source: String, exceptionReporter: Excepti
     val tokens = Scanner.createDefault(::exceptionTracker).scan(source).toList()
     val stmts = Parser.createDefault(::exceptionTracker).parse(tokens)
 
-    if (!error) interpreter.interpret(stmts)
+    if (!error) try {
+        interpreter.interpret(stmts)
+    } catch (e: PureException) {
+        exceptionReporter.report(e)
+    }
 }
