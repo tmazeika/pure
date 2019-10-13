@@ -2,7 +2,6 @@ package me.mazeika.pure.interpret
 
 import me.mazeika.pure.Token
 import me.mazeika.pure.exception.InterpretException
-import me.mazeika.pure.parse.AstPrinter
 import me.mazeika.pure.parse.Expression
 import me.mazeika.pure.parse.Statement
 
@@ -19,11 +18,9 @@ internal class DefaultInterpreter(private val env: Environment, private val out:
                 stmt.stmts.forEach { this.execute(newEnv, it) }
             }
             is Statement.Expression -> {
-                this.out.appendln("--- Evaluating: ${AstPrinter.createLisp().print(stmt.expr)}")
                 this.evaluate(env, stmt.expr)
             }
             is Statement.Print -> {
-                this.out.appendln("--- Evaluating: ${AstPrinter.createLisp().print(stmt.expr)}")
                 this.out.appendln(this.stringify(this.evaluate(env, stmt.expr)))
             }
             is Statement.Variable -> {
@@ -31,7 +28,6 @@ internal class DefaultInterpreter(private val env: Environment, private val out:
                     stmt.initializer != null -> this.evaluate(env, stmt.initializer)
                     else -> null
                 }
-                this.out.appendln("--- Defining '${stmt.name}' with: ${AstPrinter.createLisp().print(stmt.initializer)}")
                 env.define(stmt.name, value)
             }
         }
